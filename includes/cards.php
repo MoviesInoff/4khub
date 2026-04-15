@@ -32,13 +32,6 @@ function renderCard($m, $rank=0) {
     <?php return ob_get_clean();
 }
 
-if (!function_exists('tagClass')) {
-    function tagClass($tag) {
-        $map = ['4k'=>'tag-4k','hdr'=>'tag-hdr','hdr10'=>'tag-hdr','dv'=>'tag-dv','dolby vision'=>'tag-dv','1080p'=>'tag-fhd','fhd'=>'tag-fhd','720p'=>'tag-hd','hd'=>'tag-hd','bluray'=>'tag-bd','blu-ray'=>'tag-bd','web-dl'=>'tag-webl','webl'=>'tag-webl','cam'=>'tag-cam'];
-        return $map[strtolower(trim($tag))] ?? 'tag-default';
-    }
-}
-
 function renderSection($title, $icon, $items, $seeAllUrl='', $ranked=false) {
     if(empty($items)) return;
     echo '<section class="section"><div class="section-head"><div class="section-title"><i class="'.$icon.' icon"></i> '.e($title).'</div>';
