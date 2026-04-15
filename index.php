@@ -4,6 +4,8 @@ require_once __DIR__.'/includes/core.php';
 $siteName = setting('site_name','CineHub');
 $pageTitle = $siteName.' - Your Entertainment Hub';
 $apiKey   = setting('tmdb_api_key','');
+$showHeroSlider = setting('show_hero_slider', '1') !== '0';
+$telegramUrl = trim(setting('social_telegram', ''));
 $perPage  = max(8, intval(setting('homepage_count','20')));
 $page     = max(1, intval($_GET['page'] ?? 1));
 
@@ -43,19 +45,8 @@ while ($mi < $mc || $ti < $tc) {
 $items = array_slice($combined, 0, $perPage);
 $totalPages = min(max((int)($moviesData['total_pages']??1),(int)($tvData['total_pages']??1)), 20);
 
-// Build localTagsMap: map tmdb_id => tags array from local DB
-$localTagsMap = [];
-try {
-    $allTmdbIds = array_map(fn($m) => $m['id'], $items);
-    if (!empty($allTmdbIds)) {
-        $placeholders = implode(',', array_fill(0, count($allTmdbIds), '?'));
-        $localMedia = DB::rows("SELECT tmdb_id, tags FROM media WHERE tmdb_id IN ($placeholders) AND tags IS NOT NULL AND tags != ''", $allTmdbIds);
-        foreach ($localMedia as $lm) {
-            $tags = array_filter(array_map('trim', explode(',', $lm['tags'] ?? '')));
-            if (!empty($tags)) $localTagsMap[$lm['tmdb_id']] = array_values($tags);
-        }
-    }
-} catch(Exception $e) {}
+$movieTagMap = localTagsMapByTmdb(array_map(fn($m) => $m['id'], array_filter($items, fn($m) => ($m['_type'] ?? '') === 'movie')), 'movie');
+$tvTagMap = localTagsMapByTmdb(array_map(fn($m) => $m['id'], array_filter($items, fn($m) => ($m['_type'] ?? '') === 'tv')), 'tv');
 
 include __DIR__.'/includes/header.php';
 ?>
@@ -64,6 +55,7 @@ include __DIR__.'/includes/header.php';
      Wrapped in a block container with overflow:hidden + padding-bottom
      so the dots don't bleed into the section below
 -->
+<?php if ($showHeroSlider): ?>
 <div class="hero-slider-wrap" style="padding-top:var(--header-h);position:relative;overflow:hidden;padding-bottom:0">
   <div class="hero-slider" style="position:relative">
     <?php foreach($heroItems as $i => $item):
@@ -78,8 +70,8 @@ include __DIR__.'/includes/header.php';
          style="position:<?php echo $i===0?'relative':'absolute'; ?>;<?php echo $i>0?'inset:0;opacity:0;transition:opacity .8s ease;':''; ?>min-height:clamp(340px,60vw,560px)">
       <?php if($bdUrl): ?>
       <div style="position:absolute;inset:0;z-index:0">
-        <img src="<?php echo e($bdUrl); ?>" alt="" style="width:100%;height:100%;object-fit:cover;object-position:center top;filter:brightness(.5)">
-        <div style="position:absolute;inset:0;background:linear-gradient(90deg,rgba(13,13,13,.9) 0%,rgba(13,13,13,.4) 55%,rgba(13,13,13,.05) 100%),linear-gradient(0deg,var(--bg) 0%,transparent 40%)"></div>
+        <img src="<?php echo e($bdUrl); ?>" alt="" style="width:100%;height:100%;object-fit:cover;object-position:center top;filter:brightness(.62)">
+        <div style="position:absolute;inset:0;background:linear-gradient(90deg,rgba(13,13,13,.68) 0%,rgba(13,13,13,.28) 55%,rgba(13,13,13,.04) 100%),linear-gradient(0deg,var(--bg) 0%,transparent 34%)"></div>
       </div>
       <?php else: ?><div style="position:absolute;inset:0;background:var(--bg2)"></div><?php endif; ?>
       <div style="position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:clamp(40px,8vw,90px) 20px clamp(50px,9vw,100px)">
@@ -113,9 +105,20 @@ include __DIR__.'/includes/header.php';
   </div>
   <?php endif; ?>
 </div>
+<?php endif; ?>
+
+<?php if ($telegramUrl): ?>
+<div style="padding:12px 20px 0">
+  <div style="max-width:1100px;margin:0 auto">
+    <a href="<?php echo e($telegramUrl); ?>" target="_blank" rel="noopener" class="btn btn-outline" style="width:100%;justify-content:center;gap:10px;border-color:rgba(34,158,217,.55);color:#8fd7ff;background:rgba(34,158,217,.08)">
+      <i class="fab fa-telegram-plane"></i> Join Telegram
+    </a>
+  </div>
+</div>
+<?php endif; ?>
 
 <!-- ── LATEST RELEASES ──────────────────────────────────────────── -->
-<section class="section">
+<section class="section" style="<?php echo $showHeroSlider ? '' : 'padding-top:calc(var(--header-h) + 20px);'; ?>">
   <div class="section-head">
     <div class="section-title"><i class="fas fa-fire icon"></i> Latest Releases</div>
     <span style="font-size:.8rem;color:var(--text3)">Page <?php echo $page; ?> / <?php echo $totalPages; ?></span>
@@ -136,12 +139,9 @@ include __DIR__.'/includes/header.php';
     <div class="card" style="flex:none">
       <div class="card-poster-wrap">
         <a href="<?php echo e($u); ?>"><img src="<?php echo e($p); ?>" class="card-poster" alt="<?php echo e($t); ?>" loading="lazy"></a>
-        <?php $localTags = $localTagsMap[$m['id']] ?? []; if(!empty($localTags)): ?>
-        <div class="card-tags"><?php foreach(array_slice($localTags,0,3) as $ltag): ?><span class="tag <?php
-          $ltagl=strtolower(trim($ltag));
-          $tagmap=['4k'=>'tag-4k','hdr'=>'tag-hdr','hdr10'=>'tag-hdr','dv'=>'tag-dv','1080p'=>'tag-fhd','fhd'=>'tag-fhd','720p'=>'tag-hd','hd'=>'tag-hd','web-dl'=>'tag-webl','webl'=>'tag-webl','bluray'=>'tag-bd'];
-          echo $tagmap[$ltagl]??'tag-default';
-        ?>"><?php echo e(strtoupper($ltag));?></span><?php endforeach;?></div>
+        <?php if($isTV): ?><span class="tag tag-tv card-tv-tag">TV</span><?php endif; ?>
+        <?php $localTags = $isTV ? ($tvTagMap[$m['id']] ?? []) : ($movieTagMap[$m['id']] ?? []); if(!empty($localTags)): ?>
+        <div class="card-tags"><?php foreach(array_slice($localTags,0,3) as $ltag): ?><span class="tag <?php echo tagClass($ltag); ?>"><?php echo e(strtoupper($ltag));?></span><?php endforeach;?></div>
         <?php endif;?>
         <div class="card-overlay"><a href="<?php echo e($u); ?>" class="card-play"><i class="fas fa-play"></i></a></div>
       </div>

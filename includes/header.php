@@ -6,6 +6,7 @@ $pc         = setting('primary_color','#f97316');
 $curUser    = curUser();
 $curPage    = basename($_SERVER['PHP_SELF'],'.php');
 $regEnabled = (bool)setting('allow_registration','1');
+$telegramUrl = trim(setting('social_telegram',''));
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -70,6 +71,12 @@ echo "rgba($r2,$g2,$b2,0.25)";
     <?php if($regEnabled): ?>
     <a href="/register.php" style="color:var(--primary)"><i class="fas fa-user-plus" style="width:20px"></i> Register Free</a>
     <?php endif; ?>
+    <?php endif; ?>
+    <?php if($telegramUrl): ?>
+    <hr style="border-color:var(--border);margin:10px 0">
+    <a href="<?php echo e($telegramUrl); ?>" target="_blank" rel="noopener" style="color:#8fd7ff;background:rgba(34,158,217,.08);border:1px solid rgba(34,158,217,.45)">
+      <i class="fab fa-telegram-plane" style="width:20px"></i> Join Telegram
+    </a>
     <?php endif; ?>
   </nav>
 </div>

@@ -6,7 +6,7 @@ function renderCard($m, $rank=0) {
     $year   = $m['year'] ?? '';
     $rating = isset($m['vote_average']) ? number_format(floatval($m['vote_average']),1) : '';
     $poster = isset($m['poster_path']) && $m['poster_path'] ? tmdbImg($m['poster_path'],'w342') : '/assets/images/no-poster.jpg';
-    $tags   = jd($m['tags'] ?? '[]');
+    $tags   = parseTags($m['tags'] ?? '');
     if ($slug) $url = ($type==='tv') ? '/series/'.$slug : '/movie/'.$slug;
     elseif (isset($m['tmdb_id'])) $url = ($type==='tv') ? '/series.php?id='.$m['tmdb_id'] : '/movie.php?id='.$m['tmdb_id'];
     else $url = '#';
@@ -15,6 +15,7 @@ function renderCard($m, $rank=0) {
       <?php if($rank > 0): ?><div class="rank-num"><?php echo $rank; ?></div><?php endif; ?>
       <div class="card-poster-wrap">
         <a href="<?php echo e($url); ?>"><img src="<?php echo e($poster); ?>" class="card-poster" alt="<?php echo e($title); ?>" loading="lazy"></a>
+        <?php if($type==='tv'): ?><span class="tag tag-tv card-tv-tag">TV</span><?php endif; ?>
         <?php if(!empty($tags)): ?>
         <div class="card-tags"><?php foreach(array_slice($tags,0,3) as $tag): ?><span class="tag <?php echo tagClass($tag); ?>"><?php echo e(strtoupper($tag)); ?></span><?php endforeach; ?></div>
         <?php endif; ?>
@@ -31,9 +32,11 @@ function renderCard($m, $rank=0) {
     <?php return ob_get_clean();
 }
 
-function tagClass($tag) {
-    $map = ['4k'=>'tag-4k','hdr'=>'tag-hdr','hdr10'=>'tag-hdr','dv'=>'tag-dv','dolby vision'=>'tag-dv','1080p'=>'tag-fhd','fhd'=>'tag-fhd','720p'=>'tag-hd','hd'=>'tag-hd','bluray'=>'tag-bd','blu-ray'=>'tag-bd','web-dl'=>'tag-webl','webl'=>'tag-webl','cam'=>'tag-cam'];
-    return $map[strtolower(trim($tag))] ?? 'tag-default';
+if (!function_exists('tagClass')) {
+    function tagClass($tag) {
+        $map = ['4k'=>'tag-4k','hdr'=>'tag-hdr','hdr10'=>'tag-hdr','dv'=>'tag-dv','dolby vision'=>'tag-dv','1080p'=>'tag-fhd','fhd'=>'tag-fhd','720p'=>'tag-hd','hd'=>'tag-hd','bluray'=>'tag-bd','blu-ray'=>'tag-bd','web-dl'=>'tag-webl','webl'=>'tag-webl','cam'=>'tag-cam'];
+        return $map[strtolower(trim($tag))] ?? 'tag-default';
+    }
 }
 
 function renderSection($title, $icon, $items, $seeAllUrl='', $ranked=false) {

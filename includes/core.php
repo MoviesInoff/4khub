@@ -138,6 +138,47 @@ function tagsJson($media) {
     return $tags ? $tags : array();
 }
 
+function parseTags($rawTags) {
+    $raw = trim((string)$rawTags);
+    if ($raw === '') return array();
+    $decoded = json_decode($raw, true);
+    if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+        return array_values(array_filter(array_map('trim', $decoded)));
+    }
+    return array_values(array_filter(array_map('trim', explode(',', $raw))));
+}
+
+function localTagsMapByTmdb(array $tmdbIds, $type = null) {
+    $map = array();
+    $tmdbIds = array_values(array_unique(array_filter(array_map('intval', $tmdbIds))));
+    if (empty($tmdbIds)) return $map;
+    try {
+        $placeholders = implode(',', array_fill(0, count($tmdbIds), '?'));
+        $params = $tmdbIds;
+        $sql = "SELECT tmdb_id, tags FROM media WHERE tmdb_id IN ($placeholders) AND tags IS NOT NULL AND tags != ''";
+        if ($type !== null) {
+            $sql .= " AND type=?";
+            $params[] = $type;
+        }
+        foreach (DB::rows($sql, $params) as $row) {
+            $tags = parseTags($row['tags'] ?? '');
+            if (!empty($tags)) $map[(int)$row['tmdb_id']] = $tags;
+        }
+    } catch(Exception $e) {}
+    return $map;
+}
+
 function primaryColor() {
     return setting('primary_color', '#f97316');
+}
+
+if (!function_exists('tagClass')) {
+    function tagClass($tag) {
+        $map = array(
+            '4k'=>'tag-4k','hdr'=>'tag-hdr','hdr10'=>'tag-hdr','dv'=>'tag-dv','dolby vision'=>'tag-dv',
+            '1080p'=>'tag-fhd','fhd'=>'tag-fhd','720p'=>'tag-hd','hd'=>'tag-hd',
+            'bluray'=>'tag-bd','blu-ray'=>'tag-bd','web-dl'=>'tag-webl','webl'=>'tag-webl','cam'=>'tag-cam'
+        );
+        return $map[strtolower(trim((string)$tag))] ?? 'tag-default';
+    }
 }

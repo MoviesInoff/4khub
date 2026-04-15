@@ -17,6 +17,7 @@ if ($apiKey) {
     $items = array_slice($data['results'] ?? [], 0, $pp);
     $totalPages = min((int)($data['total_pages'] ?? 1), 50);
 }
+$localTagsMap = localTagsMapByTmdb(array_map(fn($m)=>$m['id'] ?? 0, $items), 'tv');
 
 include __DIR__.'/includes/header.php';
 ?>
@@ -32,7 +33,17 @@ include __DIR__.'/includes/header.php';
       $t=$m['name']??''; $p=isset($m['poster_path'])&&$m['poster_path']?tmdbImg($m['poster_path'],'w342'):'/assets/images/no-poster.jpg';
       $y=substr($m['first_air_date']??'',0,4); $r=number_format(floatval($m['vote_average']??0),1); $u='/series.php?id='.$m['id'];
     ?>
-    <div class="card" style="flex:none"><a href="<?php echo e($u);?>"><img src="<?php echo e($p);?>" class="card-poster" alt="<?php echo e($t);?>" loading="lazy"></a><a href="<?php echo e($u);?>" class="card-info"><div class="card-title"><?php echo e($t);?></div><div class="card-meta"><span><?php echo e($y);?></span><span class="card-rating"><i class="fas fa-star" style="font-size:.65rem"></i> <?php echo e($r);?></span></div></a><div class="card-overlay"><a href="<?php echo e($u);?>" class="card-play"><i class="fas fa-play"></i></a></div></div>
+    <div class="card" style="flex:none">
+      <div class="card-poster-wrap">
+        <a href="<?php echo e($u);?>"><img src="<?php echo e($p);?>" class="card-poster" alt="<?php echo e($t);?>" loading="lazy"></a>
+        <span class="tag tag-tv card-tv-tag">TV</span>
+        <?php $localTags = $localTagsMap[$m['id']] ?? []; if(!empty($localTags)): ?>
+        <div class="card-tags"><?php foreach(array_slice($localTags,0,3) as $ltag): ?><span class="tag <?php echo tagClass($ltag); ?>"><?php echo e(strtoupper($ltag));?></span><?php endforeach;?></div>
+        <?php endif;?>
+        <div class="card-overlay"><a href="<?php echo e($u);?>" class="card-play"><i class="fas fa-play"></i></a></div>
+      </div>
+      <a href="<?php echo e($u);?>" class="card-info"><div class="card-title"><?php echo e($t);?></div><div class="card-meta"><span><?php echo e($y);?></span><span class="card-rating"><i class="fas fa-star" style="font-size:.65rem"></i> <?php echo e($r);?></span></div></a>
+    </div>
     <?php endforeach;?>
   </div>
   <?php if($totalPages>1): ?>
