@@ -7,6 +7,16 @@ $ep     = max(1, intval($_GET['e'] ?? 1));
 $srvId  = intval($_GET['server'] ?? 0);
 if(!$tmdbId){ header('Location: /index.php'); exit; }
 
+function fetchImdbIdFromTmdb($tmdbId, $type) {
+    if (!$tmdbId) return '';
+    if ($type === 'movie') {
+        $movieDetail = tmdbRequest('/movie/'.$tmdbId);
+        return trim($movieDetail['imdb_id'] ?? '');
+    }
+    $external = tmdbRequest('/tv/'.$tmdbId.'/external_ids');
+    return trim($external['imdb_id'] ?? '');
+}
+
 // Try local DB first
 $media = DB::row("SELECT * FROM media WHERE tmdb_id=? AND type=?", [$tmdbId, $type]);
 
@@ -37,8 +47,12 @@ if ($media) {
     $genres      = $detail['genres'] ?? [];
     $seasonsData = array_values(array_filter($detail['seasons']??[], fn($s)=>$s['season_number']>0));
     $runtime     = intval($detail['runtime'] ?? 0);
-    $imdbId      = '';
+    $imdbId      = trim($detail['imdb_id'] ?? '');
     $customVideoUrl = '';
+}
+
+if (!$imdbId) {
+    $imdbId = fetchImdbIdFromTmdb($tmdbId, $type);
 }
 
 // Episode details for current season (fetch from TMDB)
@@ -209,16 +223,21 @@ include __DIR__.'/includes/header.php';
       <?php endforeach;?>
     </div>
     <?php endif;?>
+    <?php if($overview): ?>
+    <p style="font-size:.82rem;color:var(--text3);line-height:1.65;margin-top:10px;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden">
+      <?php echo e($overview); ?>
+    </p>
+    <?php endif; ?>
   </div>
 </div>
 
 <!-- ── SEASONS + EPISODE LIST (TV) ──────────────────────────── -->
 <?php if($type==='tv' && !empty($seasonsData)): ?>
-<div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:18px;margin-bottom:20px">
+<div style="margin-bottom:20px">
   <div style="font-size:.9rem;font-weight:700;color:var(--text);margin-bottom:14px;display:flex;align-items:center;gap:7px">
     <i class="fas fa-layer-group" style="color:var(--primary)"></i> Seasons &amp; Episodes
   </div>
-  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;overflow-x:auto;padding-bottom:4px">
+  <div class="season-tabs">
     <?php foreach($seasonsData as $sea): ?>
     <a href="?id=<?php echo $tmdbId;?>&type=tv&s=<?php echo $sea['season_number'];?>&e=1&server=<?php echo $activeSrv['id'];?>"
        style="padding:6px 18px;border-radius:20px;font-size:.82rem;font-weight:700;text-decoration:none;white-space:nowrap;transition:all .2s;flex-shrink:0;<?php echo $sea['season_number']==$season?'background:var(--primary);color:#000;border:1px solid var(--primary)':'background:var(--bg3);color:var(--text3);border:1px solid var(--border)';?>">
@@ -432,6 +451,16 @@ include __DIR__.'/includes/header.php';
 </div>
 
 <style>
+.season-tabs{
+  display:flex;
+  gap:8px;
+  flex-wrap:nowrap;
+  overflow-x:auto;
+  margin-bottom:16px;
+  padding-bottom:4px;
+  scrollbar-width:none;
+}
+.season-tabs::-webkit-scrollbar{display:none}
 .ep-list-scroll::-webkit-scrollbar{width:4px}
 .ep-list-scroll::-webkit-scrollbar-track{background:var(--bg3)}
 .ep-list-scroll::-webkit-scrollbar-thumb{background:var(--bg5);border-radius:2px}

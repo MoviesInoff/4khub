@@ -7,6 +7,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
              'social_telegram','social_twitter','social_instagram','social_youtube','social_facebook'] as $f){
         setSetting($f, trim($_POST[$f] ?? ''));
     }
+    setSetting('show_hero_slider', isset($_POST['show_hero_slider']) ? '1' : '0');
     setSetting('allow_registration', isset($_POST['allow_registration']) ? '1' : '0');
     setSetting('maintenance_mode',   isset($_POST['maintenance_mode'])   ? '1' : '0');
     $msg='Settings saved!'; $msgType='success';
@@ -89,6 +90,13 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 <div class="ac" style="margin-bottom:18px">
   <div class="ac-head"><span>Access Control</span></div>
   <div style="padding:18px;display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px;background:var(--c-bg3);border-radius:9px">
+      <div>
+        <div style="font-weight:600;color:var(--c-text);margin-bottom:3px">Homepage Hero Slider</div>
+        <div style="font-size:.78rem;color:var(--c-text3)">Turn ON/OFF the trending hero slider on homepage</div>
+      </div>
+      <label class="toggle"><input type="checkbox" name="show_hero_slider" value="1" <?php echo setting('show_hero_slider','1')?'checked':'';?>><span class="toggle-sl"></span></label>
+    </div>
     <div style="display:flex;align-items:center;justify-content:space-between;padding:14px;background:var(--c-bg3);border-radius:9px">
       <div>
         <div style="font-weight:600;color:var(--c-text);margin-bottom:3px">User Registration</div>
