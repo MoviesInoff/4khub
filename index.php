@@ -4,6 +4,7 @@ require_once __DIR__.'/includes/core.php';
 $siteName = setting('site_name','CineHub');
 $pageTitle = $siteName.' - Your Entertainment Hub';
 $apiKey   = setting('tmdb_api_key','');
+$showHeroSlider = setting('show_hero_slider', '1') !== '0';
 $perPage  = max(8, intval(setting('homepage_count','20')));
 $page     = max(1, intval($_GET['page'] ?? 1));
 
@@ -51,7 +52,13 @@ try {
         $placeholders = implode(',', array_fill(0, count($allTmdbIds), '?'));
         $localMedia = DB::rows("SELECT tmdb_id, tags FROM media WHERE tmdb_id IN ($placeholders) AND tags IS NOT NULL AND tags != ''", $allTmdbIds);
         foreach ($localMedia as $lm) {
-            $tags = array_filter(array_map('trim', explode(',', $lm['tags'] ?? '')));
+            $rawTags = trim((string)($lm['tags'] ?? ''));
+            $decodedTags = json_decode($rawTags, true);
+            if (json_last_error() === JSON_ERROR_NONE && is_array($decodedTags)) {
+                $tags = array_filter(array_map('trim', $decodedTags));
+            } else {
+                $tags = array_filter(array_map('trim', explode(',', $rawTags)));
+            }
             if (!empty($tags)) $localTagsMap[$lm['tmdb_id']] = array_values($tags);
         }
     }
@@ -64,6 +71,7 @@ include __DIR__.'/includes/header.php';
      Wrapped in a block container with overflow:hidden + padding-bottom
      so the dots don't bleed into the section below
 -->
+<?php if ($showHeroSlider): ?>
 <div class="hero-slider-wrap" style="padding-top:var(--header-h);position:relative;overflow:hidden;padding-bottom:0">
   <div class="hero-slider" style="position:relative">
     <?php foreach($heroItems as $i => $item):
@@ -113,9 +121,10 @@ include __DIR__.'/includes/header.php';
   </div>
   <?php endif; ?>
 </div>
+<?php endif; ?>
 
 <!-- ── LATEST RELEASES ──────────────────────────────────────────── -->
-<section class="section">
+<section class="section" style="<?php echo $showHeroSlider ? '' : 'padding-top:calc(var(--header-h) + 20px);'; ?>">
   <div class="section-head">
     <div class="section-title"><i class="fas fa-fire icon"></i> Latest Releases</div>
     <span style="font-size:.8rem;color:var(--text3)">Page <?php echo $page; ?> / <?php echo $totalPages; ?></span>
